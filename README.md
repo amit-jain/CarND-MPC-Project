@@ -58,58 +58,84 @@ is the vehicle starting offset of a straight line (reference). If the MPC implem
 2. The `lake_track_waypoints.csv` file has the waypoints of the lake track. You could use this to fit polynomials and points and see of how well your model tracks curve. NOTE: This file might be not completely in sync with the simulator so your solution should NOT depend on it.
 3. For visualization this C++ [matplotlib wrapper](https://github.com/lava/matplotlib-cpp) could be helpful.
 
-## Editor Settings
+## Implementation
 
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
+### Model
+The state consists of the following:
+* x, y co-ordinates of the vehicle
+* psi - the current angle of the vehicle
+* v - the current speed of the vehicle
+* cte - the calculated cross track error of the vechicle
+* epis - the error calculated for the psi
 
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
+A 3-degree polynomial were fitted to the waypoints sent from the server which were used to calculate the cte and epsi.
 
-## Code Style
+The actuators are the steering angle and the throttle.
 
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
+The constraints were defined on following for minimizing the ot function:
+* cte
+* epsi
+* velocity
 
-## Project Instructions and Rubric
+Constraints on the steering:
+* steering angle
+* throttle
 
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
+Constraints in difference of the below steering actuators sequentially
+* steering angles
+* throttle
 
-More information is only accessible by people who are already enrolled in Term 2
-of CarND. If you are enrolled, see [the project page](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/f1820894-8322-4bb3-81aa-b26b3c6dcbaf/lessons/b1ff3be0-c904-438e-aad3-2b5379f0e0c3/concepts/1a2255a0-e23c-44cf-8d41-39b8a3c8264a)
-for instructions and the project rubric.
+There was no special handling done to handle latency but the assumption is that adding a constraint for the 
+differences in steering actuators soothes the values and keeps sequential values closer thus accounting for some 
+latency. 
 
-## Hints!
+### Checking timesteps & interval between timesteps
+The following values are the ones which were arrived at after some trial and error and work for the respective reference velocities.
+The N & the dt parameters (the timestamp length and the duration between timesteps) are constant for all. These 
+ values worked best for all the velocities tried. Increasing the timesteps (N) parameter made the model less sensitive
+ at higher velocities and caused the vehicle to veer out of the track on sharp turns. Decreasing the duration between
+ timesteps (dt) parameter caused the vehicle to be over-sensitive and caused the vehicle to veer off courser at the 
+ start itself.
 
-* You don't have to follow this directory structure, but if you do, your work
-  will span all of the .cpp files here. Keep an eye out for TODOs.
+### Finalized values
+#### Reference Velocity 80
 
-## Call for IDE Profiles Pull Requests
+````
+size_t N = 6
+double dt = 0.1
+double cte_cost_coeff = 10.0
+double psi_cost_coeff = 10.0
+double v_cost_coeff = 1.0
+double delta_cost_coeff = 20000.0
+double throttle_cost_coeff = 3.0
+double delta_change_cost_coeff = 100.0
+double throttle_change_cost_coeff = 3.0  
+````
 
-Help your fellow students!
+#### Reference Velocity 60
 
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to we ensure
-that students don't feel pressured to use one IDE or another.
+````
+size_t N = 6
+double dt = 0.1
+double cte_cost_coeff = 5.0
+double psi_cost_coeff = 5.0
+double v_cost_coeff = 1.0
+double delta_cost_coeff = 5000.0
+double throttle_cost_coeff = 3.0
+double delta_change_cost_coeff = 100.0
+double throttle_change_cost_coeff = 3.0  
+````
 
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
+#### Reference Velocity 40
 
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
-
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
-
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
-
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
+````
+size_t N = 6
+double dt = 0.1
+double cte_cost_coeff = 5.0
+double psi_cost_coeff = 5.0
+double v_cost_coeff = 1.0
+double delta_cost_coeff = 2000.0
+double throttle_cost_coeff = 3.0
+double delta_change_cost_coeff = 100.0
+double throttle_change_cost_coeff = 3.0  
+````
